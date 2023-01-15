@@ -7,7 +7,7 @@ import Guide, {
 import MD, { MDTableColumn } from "../utils/md.ts";
 
 const ItemSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1),
   quantity: z.number().default(1),
 });
 
@@ -26,6 +26,10 @@ const InstructionSchema = z.intersection(
       type: z.literal("buy-items"),
       items: z.array(ItemSchema),
       vendor: z.string().min(1),
+    }),
+    z.object({
+      type: z.literal("cast-spells"),
+      spells: z.array(z.string().min(1)).min(1),
     }),
     z.object({
       type: z.literal("comment"),
@@ -63,12 +67,14 @@ const InstructionSchema = z.intersection(
     }),
     z.object({
       type: z.literal("fight-boss"),
-      boss: z.string(),
+      boss: z.string().min(1),
+      items: z.array(ItemSchema).default([]),
+      spells: z.array(z.string().min(1)).default([]),
     }),
     z.object({
       type: z.literal("grab-items"),
       items: z.array(ItemSchema).min(1),
-      where: z.string(),
+      where: z.string().min(1),
     }),
     z.object({
       type: z.literal("kill-lizard"),
@@ -77,15 +83,23 @@ const InstructionSchema = z.intersection(
     }),
     z.object({
       type: z.literal("light-bonfire"),
-      bonfire: z.string(),
+      bonfire: z.string().min(1),
     }),
     z.object({
       type: z.literal("two-hand"),
-      weapon: z.string(),
+      weapon: z.string().min(1),
     }),
     z.object({
       type: z.literal("unequip"),
       items: z.array(z.string()).min(1),
+    }),
+    z.object({
+      type: z.literal("unlock-shortcut"),
+      where: z.string().min(1),
+    }),
+    z.object({
+      type: z.literal("use-items"),
+      items: z.array(ItemSchema).min(1),
     }),
     z.object({
       type: z.literal("warp"),
@@ -119,6 +133,9 @@ const formatInstruction = (i: Instruction): string => {
     case "buy-items": {
       return `Buy ${mapItems(i.items)} from ${i.vendor}`;
     }
+    case "cast-spells": {
+      return `Cast ${i.spells.map((spell) => MD.i(spell)).join(", ")}`;
+    }
     case "comment": {
       return i.text;
     }
@@ -131,7 +148,17 @@ const formatInstruction = (i: Instruction): string => {
       return `Equip ${i.items.map((item) => MD.i(item)).join(", ")}`;
     }
     case "fight-boss": {
-      return `Fight ${MD.i(i.boss)}`;
+      const consumables =
+        i.items.length > 0
+          ? `<br>! Use ${i.items
+              .map((item) => `${MD.i(item.name)} (${item.quantity})`)
+              .join(", ")}`
+          : "";
+      const spells =
+        i.spells.length > 0
+          ? `<br>! Cast ${i.spells.map((spell) => `${MD.i(spell)}`).join(", ")}`
+          : "";
+      return `Fight ${MD.i(i.boss)}${spells}${consumables}`;
     }
     case "grab-items": {
       return i.where
@@ -147,8 +174,16 @@ const formatInstruction = (i: Instruction): string => {
     case "two-hand": {
       return `Two-hand ${MD.i(i.weapon)}`;
     }
+    case "unlock-shortcut": {
+      return `Unlock shortcut ${i.where}`;
+    }
     case "unequip": {
       return `Unequip ${i.items.map((item) => MD.i(item)).join(", ")}`;
+    }
+    case "use-items": {
+      return `Use ${i.items
+        .map((item) => `${MD.i(item.name)} (${item.quantity})`)
+        .join(", ")}`;
     }
     case "warp": {
       return i.bonfire
@@ -179,14 +214,9 @@ export default class DarkSouls3Guide extends Guide<Instruction> {
         ];
 
     const rows = instructions.map((instruction, index) => {
-      let formattedInstruction = formatInstruction(instruction);
-      if (!options.hideComments) {
-        for (const comment of instruction.comments) {
-          if (comment) {
-            formattedInstruction += `<br>${comment}`;
-          }
-        }
-      }
+      const formattedInstruction =
+        formatInstruction(instruction) +
+        this.formatComments(instruction, options);
 
       const area =
         index === 0 ||

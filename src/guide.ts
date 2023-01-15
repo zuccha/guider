@@ -112,6 +112,16 @@ ${this.formatInstructions(options)}`;
 
   abstract formatInstructions(options?: Partial<FormatOptions>): string;
 
+  protected formatComments(
+    instruction: GenericInstruction,
+    partialOptions?: Partial<FormatOptions>
+  ): string {
+    const options = { ...defaultFormatOptions, ...partialOptions };
+    return options.hideComments
+      ? ""
+      : instruction.comments.map((comment) => `<br>! ${comment}`).join("");
+  }
+
   protected filterInstructions(
     partialOptions?: Partial<FormatOptions>
   ): Instruction[] {
