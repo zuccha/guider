@@ -25,6 +25,16 @@ const GenericInstructionSchema = z.object({
 
 export type GenericInstruction = z.infer<typeof GenericInstructionSchema>;
 
+const errorMap: z.ZodErrorMap = (error, ctx) => {
+  if (error.message) return { message: error.message };
+
+  return {
+    message: ctx.data
+      ? ctx.defaultError + ": " + JSON.stringify(ctx.data)
+      : ctx.defaultError,
+  };
+};
+
 export default abstract class Guide<Instruction extends GenericInstruction> {
   protected abstract instructionsSchema: z.ZodType;
   protected abstract name: string;
@@ -55,7 +65,7 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
       rules: z.record(numeric, z.string()),
     });
 
-    const guideModel = schema.parse(maybeGuide);
+    const guideModel = schema.parse(maybeGuide, { errorMap });
 
     this.categories = guideModel.categories;
     this.description = guideModel.description;
@@ -119,7 +129,7 @@ ${this.formatInstructions(options)}`;
     const options = { ...defaultFormatOptions, ...partialOptions };
     return options.hideComments
       ? ""
-      : instruction.comments.map((comment) => `<br>! ${comment}`).join("");
+      : instruction.comments.map((comment) => `<br>- ${comment}`).join("");
   }
 
   protected filterInstructions(
