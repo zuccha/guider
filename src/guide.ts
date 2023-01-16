@@ -7,6 +7,8 @@ export type FormatOptions = {
   collapseInstructionGroups: boolean;
   hideComments: boolean;
   hideInstructionId: boolean;
+  hideOptional: boolean;
+  hideSafety: boolean;
   ignoredRules: number[];
 };
 
@@ -14,6 +16,8 @@ export const defaultFormatOptions: FormatOptions = {
   collapseInstructionGroups: false,
   hideComments: false,
   hideInstructionId: false,
+  hideOptional: false,
+  hideSafety: false,
   ignoredRules: [],
 };
 
@@ -21,6 +25,8 @@ const GenericInstructionSchema = z.object({
   comments: z.array(z.string()).default([]),
   hideOnIgnoredRules: z.array(z.number()).default([]),
   showOnIgnoredRules: z.array(z.number()).default([]),
+  optional: z.boolean().default(false),
+  safety: z.boolean().default(false),
 });
 
 export type GenericInstruction = z.infer<typeof GenericInstructionSchema>;
@@ -138,16 +144,30 @@ ${this.formatInstructions(options)}`;
     const options = { ...defaultFormatOptions, ...partialOptions };
 
     return this.instructions.filter((instruction) => {
-      if (instruction.showOnIgnoredRules.length > 0) {
-        return instruction.showOnIgnoredRules.some((rule) =>
-          options.ignoredRules.includes(rule)
-        );
+      if (options.hideOptional && instruction.optional) {
+        return false;
       }
 
-      if (instruction.hideOnIgnoredRules.length > 0) {
-        return !instruction.hideOnIgnoredRules.some((rule) =>
+      if (options.hideSafety && instruction.safety) {
+        return false;
+      }
+
+      if (
+        instruction.showOnIgnoredRules.length > 0 &&
+        instruction.showOnIgnoredRules.some(
+          (rule) => !options.ignoredRules.includes(rule)
+        )
+      ) {
+        return false;
+      }
+
+      if (
+        instruction.hideOnIgnoredRules.length > 0 &&
+        instruction.hideOnIgnoredRules.some((rule) =>
           options.ignoredRules.includes(rule)
-        );
+        )
+      ) {
+        return false;
       }
 
       return true;

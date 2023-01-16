@@ -38,6 +38,10 @@ export default class MD {
     return new MD(text);
   }
 
+  static bi(text: string): string {
+    return text ? `***${text}***` : "";
+  }
+
   static b(text: string): string {
     return text ? `**${text}**` : "";
   }

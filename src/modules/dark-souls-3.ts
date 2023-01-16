@@ -16,13 +16,19 @@ type Item = z.infer<typeof ItemSchema>;
 const NameSchema = z.string().min(1);
 
 const InstructionSchema = z.intersection(
-  z.object({ area: z.string(), optional: z.boolean().default(false) }),
+  z.object({
+    area: z.string(),
+  }),
   z.union([
     z.object({
       type: z.literal("allot-estus"),
       from: z.enum(["ashen", "normal"]),
       to: z.enum(["ashen", "normal"]),
       quantity: z.union([z.literal("all"), z.number().min(1)]).default("all"),
+    }),
+    z.object({
+      type: z.literal("attune-spells"),
+      spells: z.array(NameSchema).min(1),
     }),
     z.object({
       type: z.literal("burn-undead-bone-shards"),
@@ -36,6 +42,11 @@ const InstructionSchema = z.intersection(
     z.object({
       type: z.literal("cast-spells"),
       spells: z.array(NameSchema).min(1),
+    }),
+    z.object({
+      type: z.literal("change-equipment"),
+      equip: z.array(NameSchema).default([]),
+      unequip: z.array(NameSchema).default([]),
     }),
     z.object({
       type: z.literal("comment"),
@@ -66,10 +77,6 @@ const InstructionSchema = z.intersection(
         "Thief",
         "Warrior",
       ]),
-    }),
-    z.object({
-      type: z.literal("equip"),
-      items: z.array(z.string()).min(1),
     }),
     z.object({
       type: z.literal("fight-boss"),
@@ -106,10 +113,6 @@ const InstructionSchema = z.intersection(
       weapon: NameSchema,
     }),
     z.object({
-      type: z.literal("unequip"),
-      items: z.array(NameSchema).min(1),
-    }),
-    z.object({
       type: z.literal("unlock-shortcut"),
       where: NameSchema,
     }),
@@ -141,41 +144,49 @@ const mapItems = (items: Item[]): string =>
   items
     .map((item) =>
       item.quantity > 1
-        ? `${MD.i(item.name)} (${item.quantity})`
-        : MD.i(item.name)
+        ? `${MD.bi(item.name)} (${item.quantity})`
+        : MD.bi(item.name)
     )
     .join(", ");
 
-const formatInstruction = (i: Instruction): string => {
+const formatDarkSouls3Instruction = (i: Instruction): string => {
   const formatInstructionByType = (): string => {
     switch (i.type) {
       case "allot-estus": {
         const estus = i.quantity === 1 ? "Estus Flask" : "Estus Flasks";
-        const from = MD.i(`${capitalize(i.from)} ${estus}`);
-        const to = MD.i(`${capitalize(i.to)} ${estus}`);
+        const from = MD.bi(`${capitalize(i.from)} ${estus}`);
+        const to = MD.bi(`${capitalize(i.to)} ${estus}`);
         return `Allot ${i.quantity} ${from} to ${to}`;
+      }
+      case "attune-spells": {
+        return `Attune ${i.spells.map((spell) => MD.bi(spell)).join(", ")}`;
       }
       case "burn-undead-bone-shards": {
         const amount = i.amount ?? "all";
         const shard = amount === 1 ? "Undead Bone Shard" : "Undead Bone Shards";
-        return `Burn ${amount} ${MD.i(shard)} at the bonfire`;
+        return `Burn ${amount} ${MD.bi(shard)} at the bonfire`;
       }
       case "buy-items": {
         return `Buy ${mapItems(i.items)} from ${i.vendor}`;
       }
       case "cast-spells": {
-        return `Cast ${i.spells.map((spell) => MD.i(spell)).join(", ")}`;
+        return `Cast ${i.spells.map((spell) => MD.bi(spell)).join(", ")}`;
+      }
+      case "change-equipment": {
+        const equips = i.equip.map((item) => MD.bi(item)).join(", ");
+        const unequips = i.unequip.map((item) => MD.bi(item)).join(", ");
+        const changes = [];
+        if (equips) changes.push(`equip ${equips}`);
+        if (unequips) changes.push(`unequip ${unequips}`);
+        return capitalize(changes.join(" and "));
       }
       case "comment": {
         return i.text;
       }
       case "create-character": {
-        const className = MD.i(i.class);
-        const burialGift = MD.i(i.burialGift);
+        const className = MD.bi(i.class);
+        const burialGift = MD.bi(i.burialGift);
         return `Choose ${className} class and ${burialGift} burial gift`;
-      }
-      case "equip": {
-        return `Equip ${i.items.map((item) => MD.i(item)).join(", ")}`;
       }
       case "fight-boss": {
         if (i.spells.length > 0)
@@ -188,7 +199,7 @@ const formatInstruction = (i: Instruction): string => {
               .map((item) => `${MD.i(item.name)} (${item.quantity})`)
               .join(", ")}`
           );
-        return `Fight ${MD.i(i.boss)}`;
+        return `Fight ${MD.bi(i.boss)}`;
       }
       case "grab-items": {
         return i.where
@@ -200,53 +211,60 @@ const formatInstruction = (i: Instruction): string => {
         return `Kill ${lizards} ${i.where} for ${mapItems(i.rewards)}`;
       }
       case "light-bonfire": {
-        return `Light ${MD.i(i.bonfire)} bonfire`;
+        return `Light ${MD.bi(i.bonfire)} bonfire`;
       }
       case "reinforce-estus": {
         const amount = i.amount ?? "all";
         const estus = amount === 1 ? "Estus Flask" : "Estus Flasks";
-        return `Reinforce ${amount} ${MD.i(estus)} by ${MD.i("Andre")}`;
+        return `Reinforce ${amount} ${MD.bi(estus)} by ${MD.i("Andre")}`;
       }
       case "trade": {
+        const item = MD.bi(i.item);
+        const reward = MD.bi(i.reward);
         const pickle = MD.i("Pickle Pee");
-        return `Trade a ${MD.i(i.item)} for a ${MD.i(i.reward)} with ${pickle}`;
+        return `Trade a ${item} for a ${reward} with ${pickle}`;
       }
       case "two-hand": {
-        return `Two-hand ${MD.i(i.weapon)}`;
+        return `Two-hand ${MD.bi(i.weapon)}`;
       }
       case "unlock-shortcut": {
         return `Unlock shortcut ${i.where}`;
       }
-      case "unequip": {
-        return `Unequip ${i.items.map((item) => MD.i(item)).join(", ")}`;
-      }
       case "upgrade-weapon": {
+        const weapon = MD.bi(i.weapon);
         const infusion = i.infusion ? MD.i(i.infusion) : "";
         const level = i.level ? `+${i.level}` : "";
         if (infusion && level)
-          return `Infuse ${i.weapon} with ${infusion} and upgrade to ${level}`;
-        if (infusion) return `Infuse ${i.weapon} with ${infusion}`;
-        if (level) return `Upgrade ${i.weapon} to ${level}`;
-        return `Upgrade ${i.weapon}`;
+          return `Infuse ${weapon} with ${infusion} and upgrade to ${level}`;
+        if (infusion) return `Infuse ${weapon} with ${infusion}`;
+        if (level) return `Upgrade ${weapon} to ${level}`;
+        return `Upgrade ${weapon}`;
       }
       case "use-items": {
         return `Use ${i.items
-          .map((item) => `${MD.i(item.name)} (${item.quantity})`)
+          .map((item) => `${MD.bi(item.name)} (${item.quantity})`)
           .join(", ")}`;
       }
       case "warp": {
-        const using = i.using ? ` using ${MD.i(i.using)}` : "";
+        const using = i.using ? ` using ${MD.bi(i.using)}` : "";
         return i.bonfire
-          ? `Warp to ${MD.i(i.bonfire)}${using}`
+          ? `Warp to ${MD.bi(i.bonfire)}${using}`
           : `Warp to last bonfire rested at${using}`;
       }
     }
   };
 
   const formattedInstruction = MD.b(formatInstructionByType());
-  return i.optional
-    ? `${MD.i("[optional] ")}${formattedInstruction}`
-    : formattedInstruction;
+
+  if (i.safety) {
+    return `${MD.i("[peachy] ")}${formattedInstruction}`;
+  }
+
+  if (i.optional) {
+    return `${MD.i("[optional] ")}${formattedInstruction}`;
+  }
+
+  return formattedInstruction;
 };
 
 export default class DarkSouls3Guide extends Guide<Instruction> {
@@ -278,7 +296,7 @@ export default class DarkSouls3Guide extends Guide<Instruction> {
     for (let i = 0; i < instructions.length; ++i) {
       const instruction = instructions[i];
       const formattedInstruction =
-        formatInstruction(instruction) +
+        formatDarkSouls3Instruction(instruction) +
         this.formatComments(instruction, options);
       rows.push([`${i}`, MD.b(instruction.area), formattedInstruction]);
     }
