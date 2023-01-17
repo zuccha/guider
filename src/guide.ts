@@ -46,7 +46,8 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
   protected abstract name: string;
 
   private categories: string[];
-  private description: string;
+  private description: string[];
+  private resources: string[];
   private gameTitle: string;
   private rules: Record<number, string>;
 
@@ -54,7 +55,8 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
 
   constructor() {
     this.categories = [];
-    this.description = "";
+    this.description = [];
+    this.resources = [];
     this.gameTitle = "";
     this.instructions = [];
     this.rules = [];
@@ -63,7 +65,8 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
   parse(maybeGuide: unknown): void {
     const schema = z.object({
       categories: z.array(z.string()),
-      description: z.string(),
+      description: z.array(z.string()).min(1),
+      resources: z.array(z.string()).default([]),
       gameTitle: z.string(),
       instructions: z.array(
         z.intersection(GenericInstructionSchema, this.instructionsSchema)
@@ -75,6 +78,7 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
 
     this.categories = guideModel.categories;
     this.description = guideModel.description;
+    this.resources = guideModel.resources;
     this.gameTitle = guideModel.gameTitle;
     this.instructions = guideModel.instructions;
     this.rules = guideModel.rules;
@@ -83,6 +87,8 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
   format(options?: Partial<FormatOptions>): string {
     return `\
 ${this.formatHeader()}
+
+${this.formatResources()}
 
 ${this.formatRules(options)}
 
@@ -96,7 +102,7 @@ ${this.formatInstructions(options)}`;
           ? this.gameTitle
           : `${this.gameTitle} - ${this.categories.join(", ")}`
       )
-      .par(this.description)
+      .pars(this.description)
       .end();
   }
 
@@ -123,6 +129,18 @@ ${this.formatInstructions(options)}`;
             : rule[1]
         )
       )
+      .end();
+  }
+
+  formatResources(): string {
+    if (this.resources.length === 0) {
+      return "";
+    }
+
+    return MD.start()
+      .section("Resources")
+      .par("Other useful resources:")
+      .unordered(this.resources)
       .end();
   }
 

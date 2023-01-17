@@ -63,6 +63,11 @@ export default class MD {
     return this;
   }
 
+  pars(texts: string[]): MD {
+    texts.forEach((text) => this._lines.push(text));
+    return this;
+  }
+
   title(text: string): MD {
     this._lines.push(`# ${text}`);
     return this;
