@@ -189,17 +189,16 @@ const formatDarkSouls3Instruction = (i: Instruction): string => {
         return `Choose ${className} class and ${burialGift} burial gift`;
       }
       case "fight-boss": {
+        let fight = `Fight ${MD.bi(i.boss)}`;
         if (i.spells.length > 0)
-          i.comments.unshift(
-            `Cast ${i.spells.map((spell) => `${MD.i(spell)}`).join(", ")}`
-          );
+          fight += `<br>- Cast ${i.spells
+            .map((spell) => `${MD.i(spell)}`)
+            .join(", ")}`;
         if (i.items.length > 0)
-          i.comments.unshift(
-            `Use ${i.items
-              .map((item) => `${MD.i(item.name)} (${item.quantity})`)
-              .join(", ")}`
-          );
-        return `Fight ${MD.bi(i.boss)}`;
+          fight += `<br>- Use ${i.items
+            .map((item) => `${MD.i(item.name)} (${item.quantity})`)
+            .join(", ")}`;
+        return fight;
       }
       case "grab-items": {
         return i.where
