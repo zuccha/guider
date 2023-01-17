@@ -62,6 +62,27 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
     this.rules = [];
   }
 
+  getRules(options: { isImpactful?: boolean } = {}): Record<number, string> {
+    const isImpactful = options.isImpactful ?? false;
+    if (!isImpactful) {
+      return this.rules;
+    }
+
+    const impactfulRuleIds = new Set<number>();
+    this.instructions.forEach((instruction) => {
+      instruction.hideOnIgnoredRules.forEach((rule) =>
+        impactfulRuleIds.add(rule)
+      );
+      instruction.showOnIgnoredRules.forEach((rule) =>
+        impactfulRuleIds.add(rule)
+      );
+    });
+
+    const impactfulRules: Record<number, string> = {};
+    impactfulRuleIds.forEach((id) => (impactfulRules[id] = this.rules[id]));
+    return impactfulRules;
+  }
+
   parse(maybeGuide: unknown): void {
     const schema = z.object({
       categories: z.array(z.string()),
