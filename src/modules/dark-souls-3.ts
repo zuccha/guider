@@ -254,14 +254,14 @@ const formatDarkSouls3Instruction = (i: Instruction): string => {
     }
   };
 
-  const formattedInstruction = MD.b(formatInstructionByType());
+  const formattedInstruction = formatInstructionByType();
 
   if (i.safety) {
-    return `${MD.i("[peachy] ")}${formattedInstruction}`;
+    return `${MD.i("[peachy]")} ${formattedInstruction}`;
   }
 
   if (i.optional) {
-    return `${MD.i("[optional] ")}${formattedInstruction}`;
+    return `${MD.i("[optional]")} ${formattedInstruction}`;
   }
 
   return formattedInstruction;
@@ -298,7 +298,7 @@ export default class DarkSouls3Guide extends Guide<Instruction> {
       const formattedInstruction =
         formatDarkSouls3Instruction(instruction) +
         this.formatComments(instruction, options);
-      rows.push([`${i}`, MD.b(instruction.area), formattedInstruction]);
+      rows.push([`${i}`, instruction.area, formattedInstruction]);
     }
 
     if (options.collapseInstructionGroups) {
