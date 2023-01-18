@@ -256,7 +256,7 @@ const formatDarkSouls3Instruction = (i: Instruction): string => {
   const formattedInstruction = formatInstructionByType();
 
   if (i.safety) {
-    return `${MD.i("[peachy]")} ${formattedInstruction}`;
+    return `${MD.i("[safety]")} ${formattedInstruction}`;
   }
 
   if (i.optional) {
