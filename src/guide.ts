@@ -62,6 +62,10 @@ export default abstract class Guide<Instruction extends GenericInstruction> {
     this.rules = [];
   }
 
+  getName(): string {
+    return this.name;
+  }
+
   getRules(options: { isImpactful?: boolean } = {}): Record<number, string> {
     const isImpactful = options.isImpactful ?? false;
     if (!isImpactful) {
